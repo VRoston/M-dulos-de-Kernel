@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
         mask = atoi(argv[1]);
     } else {
         // Default: Show CPU model and memory info
-        mask = KFETCH_CPU_MODEL | KFETCH_MEM;
+        mask = KFETCH_FULL_INFO;
     }
     
     // Set the mask
