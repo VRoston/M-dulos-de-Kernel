@@ -3,7 +3,7 @@
 #include <linux/seq_file.h>
 #include <linux/sched.h>
 #include <linux/sched/signal.h> // Para task->signal, rlim
-#include <linux/sched/task.h>   // Para get_task_struct, put_task_struct, task_is_running, task_curr
+#include <linux/sched/task.h>   // Para get_task_struct, put_task_struct (task_is_running está em linux/sched.h)
 #include <linux/cred.h>         // Para task_euid, current_user_ns(), kuid_t
 #include <linux/uidgid.h>       // Para KUIDT_INIT, from_kuid_munged
 #include <linux/kernel.h>       // Para KERN_INFO, RLIM_INFINITY, pr_info
@@ -11,10 +11,10 @@
 #include <linux/user_namespace.h> // Para init_user_ns (contexto para KUIDT_INIT)
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("EduardoSilvaS via Copilot"); // Mantendo o autor conforme a conversa
+MODULE_AUTHOR("EduardoSilvaS via Copilot");
 MODULE_DESCRIPTION("Módulo de avaliação de risco de processos aprimorado");
 
-static struct proc_dir_entry *proc_entry; // Revertido de proc_entry_enhanced
+static struct proc_dir_entry *proc_entry;
 
 // Define os níveis de risco
 enum risk_level {
@@ -34,7 +34,8 @@ static int calculate_numerical_risk(struct task_struct *task) {
 
     // Tratar threads do kernel
     if (task->flags & PF_KTHREAD) {
-        if (task_is_running(task) || task_curr(task)) {
+        // Verifica se a thread do kernel está na runqueue (ativa)
+        if (task_is_running(task)) { // Removido task_curr(task)
              risk_score += 1;
         }
         if (task->flags & PF_EXITING) {
@@ -51,7 +52,8 @@ static int calculate_numerical_risk(struct task_struct *task) {
         }
     }
 
-    if (task_is_running(task) || task_curr(task)) {
+    // Verifica se o processo está na runqueue (ativamente usando CPU ou pronto para)
+    if (task_is_running(task)) { // Removido task_curr(task)
          risk_score += 1;
     }
 
@@ -85,7 +87,7 @@ static enum risk_level get_risk_category(int numerical_risk) {
 }
 
 // Função chamada para mostrar o conteúdo do arquivo no procfs
-static int proc_show(struct seq_file *m, void *v) { // Revertido de proc_show_enhanced
+static int proc_show(struct seq_file *m, void *v) {
     struct task_struct *task;
     int numerical_risk;
     enum risk_level category;
@@ -149,36 +151,36 @@ static int proc_show(struct seq_file *m, void *v) { // Revertido de proc_show_en
 }
 
 // Função chamada quando o arquivo no procfs é aberto
-static int proc_open(struct inode *inode, struct file *file) { // Revertido de proc_open_enhanced
-    return single_open(file, proc_show, NULL); // Usa proc_show
+static int proc_open(struct inode *inode, struct file *file) {
+    return single_open(file, proc_show, NULL);
 }
 
 // Define as operações do arquivo no procfs
-static const struct proc_ops proc_fops = { // Revertido de proc_fops_enhanced
-    .proc_open = proc_open, // Usa proc_open
+static const struct proc_ops proc_fops = {
+    .proc_open = proc_open,
     .proc_read = seq_read,
     .proc_lseek = seq_lseek,
     .proc_release = single_release,
 };
 
 // Função de inicialização do módulo
-static int __init risk_init(void) { // Revertido de risk_init_enhanced
-    proc_entry = proc_create("kfetch_risk", 0, NULL, &proc_fops); // Nome original do proc e usa proc_fops
+static int __init risk_init(void) {
+    proc_entry = proc_create("kfetch_risk", 0, NULL, &proc_fops);
     if (!proc_entry) {
-        pr_err("Falha ao criar a entrada /proc/kfetch_risk\n"); // Mensagem atualizada
+        pr_err("Falha ao criar a entrada /proc/kfetch_risk\n");
         return -ENOMEM;
     }
-    pr_info("Módulo de risco aprimorado carregado: /proc/kfetch_risk\n"); // Mensagem atualizada
+    pr_info("Módulo de risco aprimorado carregado: /proc/kfetch_risk\n");
     return 0;
 }
 
 // Função de finalização do módulo
-static void __exit risk_exit(void) { // Revertido de risk_exit_enhanced
+static void __exit risk_exit(void) {
     if (proc_entry) {
         proc_remove(proc_entry);
     }
     pr_info("Módulo de risco aprimorado descarregado\n");
 }
 
-module_init(risk_init); // Usa risk_init
-module_exit(risk_exit); // Usa risk_exit
+module_init(risk_init);
+module_exit(risk_exit);
