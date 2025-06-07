@@ -33,8 +33,8 @@
 #define KFETCH_FULL_INFO ((1 << KFETCH_NUM_INFO) - 1)
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Seu Nome");
-MODULE_DESCRIPTION("Módulo para informações do sistema");
+MODULE_AUTHOR("G7");
+MODULE_DESCRIPTION("Módulo para pegar informações do sistema");
 
 struct kfetch_data {
     int mask;
