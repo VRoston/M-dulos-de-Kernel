@@ -11,10 +11,10 @@
 #include <linux/user_namespace.h> // Para init_user_ns (contexto para KUIDT_INIT)
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("EduardoSilvaS via Copilot");
+MODULE_AUTHOR("EduardoSilvaS via Copilot"); // Mantendo o autor conforme a conversa
 MODULE_DESCRIPTION("Módulo de avaliação de risco de processos aprimorado");
 
-static struct proc_dir_entry *proc_entry_enhanced;
+static struct proc_dir_entry *proc_entry; // Revertido de proc_entry_enhanced
 
 // Define os níveis de risco
 enum risk_level {
@@ -34,39 +34,27 @@ static int calculate_numerical_risk(struct task_struct *task) {
 
     // Tratar threads do kernel
     if (task->flags & PF_KTHREAD) {
-        // Threads do kernel são geralmente confiáveis, mas podem ser parte de um problema.
-        // Atribuir um score base baixo.
-        if (task_is_running(task) || task_curr(task)) { // Verifica se está na runqueue ou executando
-             risk_score += 1; // Thread do kernel ativa
+        if (task_is_running(task) || task_curr(task)) {
+             risk_score += 1;
         }
-        if (task->flags & PF_EXITING) { // Se a thread do kernel estiver saindo
+        if (task->flags & PF_EXITING) {
             risk_score += 2;
         }
-        return risk_score; // Max para kthread aqui é 3 (ativo + saindo)
+        return risk_score;
     }
 
     // Para processos de usuário:
-
-    // Métrica 1: Uso/Configuração da CPU
-    // task->signal pode ser NULL para alguns processos muito cedo ou se não tiverem manipuladores de sinal.
     if (task->signal) {
-        // RLIMIT_CPU é o limite de tempo de CPU em segundos.
-        // Um limite muito baixo pode indicar um processo restrito ou mal configurado.
-        // RLIM_INFINITY indica sem limite.
         if (task->signal->rlim[RLIMIT_CPU].rlim_cur != RLIM_INFINITY &&
-            task->signal->rlim[RLIMIT_CPU].rlim_cur < 10) { // Ex: limite < 10 segundos
+            task->signal->rlim[RLIMIT_CPU].rlim_cur < 10) {
             risk_score += 1;
         }
     }
 
-    // Verifica se o processo está ativamente usando CPU (na runqueue ou executando)
     if (task_is_running(task) || task_curr(task)) {
          risk_score += 1;
     }
 
-    // Métrica 2: Atividade de E/S (cumulativa desde o início do processo)
-    // task->ioac contém contadores de bytes de E/S.
-    // Valores altos podem indicar atividade intensa. Ex: > 100MB.
     if (task->ioac.read_bytes > (100UL * 1024 * 1024)) {
         risk_score += 1;
     }
@@ -74,17 +62,12 @@ static int calculate_numerical_risk(struct task_struct *task) {
         risk_score += 1;
     }
 
-    // Métrica 3: Privilégios
-    // Processos rodando como root (EUID 0) têm maior potencial de impacto.
-    // KUIDT_INIT(0) representa o UID root no namespace de usuário inicial.
     if (uid_eq(task_euid(task), KUIDT_INIT(0))) {
         risk_score += 2;
     }
 
-    // Métrica 4: Estado do Processo
-    // Processos que estão finalizando (PF_EXITING).
     if (task->flags & PF_EXITING) {
-        risk_score += 2; // Peso maior para processos saindo
+        risk_score += 2;
     }
     
     return risk_score;
@@ -102,7 +85,7 @@ static enum risk_level get_risk_category(int numerical_risk) {
 }
 
 // Função chamada para mostrar o conteúdo do arquivo no procfs
-static int proc_show_enhanced(struct seq_file *m, void *v) {
+static int proc_show(struct seq_file *m, void *v) { // Revertido de proc_show_enhanced
     struct task_struct *task;
     int numerical_risk;
     enum risk_level category;
@@ -116,23 +99,21 @@ static int proc_show_enhanced(struct seq_file *m, void *v) {
                "PID", "COMM", "UID", "CPU_RLIM", "IO_R_MB", "IO_W_MB", "RISK");
     seq_puts(m, "-----------------------------------------------------------------------------------\n");
 
-    rcu_read_lock(); // Necessário para iterar sobre processos com segurança
+    rcu_read_lock();
     for_each_process(task) {
-        // get_task_struct incrementa a contagem de uso do task_struct,
-        // impedindo que seja liberado enquanto o usamos.
         get_task_struct(task);
 
-        if (task->flags & PF_KTHREAD) { // Simplificação para threads do kernel
-            rlim_cpu_cur_val = (unsigned long)-2; // Indicar N/A para kthreads
-            display_uid = -1; // UID não é tão relevante da mesma forma
+        if (task->flags & PF_KTHREAD) {
+            rlim_cpu_cur_val = (unsigned long)-2;
+            display_uid = -1;
         } else {
             if (task->signal) {
                 rlim_cpu_cur_val = task->signal->rlim[RLIMIT_CPU].rlim_cur;
                 if (rlim_cpu_cur_val == RLIM_INFINITY) {
-                    rlim_cpu_cur_val = (unsigned long)-1; // Representa infinito
+                    rlim_cpu_cur_val = (unsigned long)-1;
                 }
             } else {
-                rlim_cpu_cur_val = (unsigned long)-2; // Indicar N/A se task->signal for NULL
+                rlim_cpu_cur_val = (unsigned long)-2;
             }
             task_euid_val = task_euid(task);
             display_uid = from_kuid_munged(current_user_ns(), task_euid_val);
@@ -154,7 +135,7 @@ static int proc_show_enhanced(struct seq_file *m, void *v) {
                    risk_level_str[category],
                    numerical_risk);
         
-        put_task_struct(task); // Libera a referência ao task_struct
+        put_task_struct(task);
     }
     rcu_read_unlock();
 
@@ -168,36 +149,36 @@ static int proc_show_enhanced(struct seq_file *m, void *v) {
 }
 
 // Função chamada quando o arquivo no procfs é aberto
-static int proc_open_enhanced(struct inode *inode, struct file *file) {
-    return single_open(file, proc_show_enhanced, NULL);
+static int proc_open(struct inode *inode, struct file *file) { // Revertido de proc_open_enhanced
+    return single_open(file, proc_show, NULL); // Usa proc_show
 }
 
 // Define as operações do arquivo no procfs
-static const struct proc_ops proc_fops_enhanced = {
-    .proc_open = proc_open_enhanced,
+static const struct proc_ops proc_fops = { // Revertido de proc_fops_enhanced
+    .proc_open = proc_open, // Usa proc_open
     .proc_read = seq_read,
     .proc_lseek = seq_lseek,
     .proc_release = single_release,
 };
 
 // Função de inicialização do módulo
-static int __init risk_init_enhanced(void) {
-    proc_entry_enhanced = proc_create("kfetch_risk_enhanced", 0, NULL, &proc_fops_enhanced);
-    if (!proc_entry_enhanced) {
-        pr_err("Falha ao criar a entrada /proc/kfetch_risk_enhanced\n");
+static int __init risk_init(void) { // Revertido de risk_init_enhanced
+    proc_entry = proc_create("kfetch_risk", 0, NULL, &proc_fops); // Nome original do proc e usa proc_fops
+    if (!proc_entry) {
+        pr_err("Falha ao criar a entrada /proc/kfetch_risk\n"); // Mensagem atualizada
         return -ENOMEM;
     }
-    pr_info("Módulo de risco aprimorado carregado: /proc/kfetch_risk_enhanced\n");
+    pr_info("Módulo de risco aprimorado carregado: /proc/kfetch_risk\n"); // Mensagem atualizada
     return 0;
 }
 
 // Função de finalização do módulo
-static void __exit risk_exit_enhanced(void) {
-    if (proc_entry_enhanced) {
-        proc_remove(proc_entry_enhanced);
+static void __exit risk_exit(void) { // Revertido de risk_exit_enhanced
+    if (proc_entry) {
+        proc_remove(proc_entry);
     }
     pr_info("Módulo de risco aprimorado descarregado\n");
 }
 
-module_init(risk_init_enhanced);
-module_exit(risk_exit_enhanced);
+module_init(risk_init); // Usa risk_init
+module_exit(risk_exit); // Usa risk_exit
