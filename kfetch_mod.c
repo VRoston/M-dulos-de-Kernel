@@ -56,14 +56,27 @@ static int kfetch_release(struct inode *inodep, struct file *filep) {
 static ssize_t kfetch_write(struct file *filep, const char __user *buffer,
                           size_t len, loff_t *offset) {
     struct kfetch_data *data = filep->private_data;
-    int mask;
+    unsigned int mask;
     
-    if (copy_from_user(&mask, buffer, sizeof(int)))
+    // Check if the provided buffer has at least sizeof(unsigned int) bytes
+    if (len < sizeof(unsigned int))
+        return -EINVAL;
+    
+    // Copy exactly sizeof(unsigned int) bytes from the user buffer
+    if (copy_from_user(&mask, buffer, sizeof(unsigned int)))
         return -EFAULT;
+    
+    // Validate mask (optional) - ensure at least one bit is set
+    // and no bits beyond our defined fields are set
+    if (mask == 0 || (mask & ~((1 << KFETCH_NUM_INFO) - 1)))
+        return -EINVAL;
+    
     mutex_lock(&data->lock);
     data->mask = mask;
     mutex_unlock(&data->lock);
-    return sizeof(int);
+    
+    // Return the number of bytes we read
+    return sizeof(unsigned int);
 }
 
 static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
@@ -80,11 +93,11 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
         "/   \\  ___    /    /    ",
         "\\    \\_\\  \\  /    /  ",
         " \\______  / /____/      ",
-        "       \\/               ",
+        "        \\/              ",
         "                         ",
         "                         "
     };
-    const int logo_lines = 6;  // Número real de linhas do logo
+    const int logo_lines = 8;  // Número real de linhas do logo
     
     si_meminfo(&mem_info);
     ktime_get_boottime_ts64(&uptime);
@@ -99,18 +112,18 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
         pos += snprintf(buf + pos, size - pos, "%-32s Kernel: %s\n", line, uts->release);
     }
 
-    // Informação do CPU modelo
-    if (data->mask & (1 << 2)) {
-        struct cpuinfo_x86 *c = &cpu_data(0);
-        const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
-        pos += snprintf(buf + pos, size - pos, "%-32s CPU: %s\n", line, c->x86_model_id);
-    }
-
     // Informação do número de CPUs
     if (data->mask & (1 << 1)) {
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
         pos += snprintf(buf + pos, size - pos, "%-32s CPUs: %u/%u\n", line,
                       num_online_cpus(), num_possible_cpus());
+    }
+
+    // Informação do CPU modelo
+    if (data->mask & (1 << 2)) {
+        struct cpuinfo_x86 *c = &cpu_data(0);
+        const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
+        pos += snprintf(buf + pos, size - pos, "%-32s CPU: %s\n", line, c->x86_model_id);
     }
 
     // Informação da memória
@@ -119,6 +132,13 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
         pos += snprintf(buf + pos, size - pos, "%-32s Mem: %luMB/%luMB\n", line,
                       (mem_info.freeram << (PAGE_SHIFT - 10)) / 1024,
                       (mem_info.totalram << (PAGE_SHIFT - 10)) / 1024);
+    }
+
+    // Informação de uptime
+    if (data->mask & (1 << 4)) {
+        unsigned long minutes = uptime.tv_sec / 60;
+        const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
+        pos += snprintf(buf + pos, size - pos, "%-32s Uptime: %lu min\n", line, minutes);
     }
 
     // Informação de processos
@@ -134,13 +154,6 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
         rcu_read_unlock();
         
         pos += snprintf(buf + pos, size - pos, "%-32s Proc: %d\n", line, process_count);
-    }
-
-    // Informação de uptime
-    if (data->mask & (1 << 4)) {
-        unsigned long minutes = uptime.tv_sec / 60;
-        const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
-        pos += snprintf(buf + pos, size - pos, "%-32s Uptime: %lu min\n", line, minutes);
     }
 }
 
@@ -190,7 +203,7 @@ static int __init kfetch_init(void) {
         return major_num;
     }
 
-    kfetch_class = class_create(THIS_MODULE, CLASS_NAME);
+    kfetch_class = class_create(CLASS_NAME);
     if (IS_ERR(kfetch_class)) {
         unregister_chrdev(major_num, DEVICE_NAME);
         return PTR_ERR(kfetch_class);
