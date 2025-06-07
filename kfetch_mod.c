@@ -73,16 +73,16 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
     int pos = 0;
     int logo_idx = 0;
     const char *logo[] = {
-        " __      _______   ",
-        " \\ \\    / /  __ \\  ",
-        "  \\ \\  / /| |__) | ",
-        "   \\ \\/ / |  _  /  ",
-        "    \\  /  | | \\ \\  ",
-        "     \\/   |_|  \\_\\ ",
-        "                   ",
-        "                   ",
-        "                   ",
-        "                   "
+        "   ____ _____ ",
+        "  / ___|___  |",
+        " | |  _   / / ",
+        " | |_| | / /  ",
+        "  \\____|/_/   ",
+        "              ",
+        "              ",
+        "              ",
+        "              ",
+        "              "
     };
     const int logo_lines = 6;  // Número real de linhas do logo
     
