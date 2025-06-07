@@ -60,7 +60,6 @@ static ssize_t kfetch_write(struct file *filep, const char __user *buffer,
     
     if (copy_from_user(&mask, buffer, sizeof(int)))
         return -EFAULT;
-    ""
     mutex_lock(&data->lock);
     data->mask = mask;
     mutex_unlock(&data->lock);
@@ -191,7 +190,7 @@ static int __init kfetch_init(void) {
         return major_num;
     }
 
-    kfetch_class = class_create(CLASS_NAME);
+    kfetch_class = class_create(THIS_MODULE, CLASS_NAME);
     if (IS_ERR(kfetch_class)) {
         unregister_chrdev(major_num, DEVICE_NAME);
         return PTR_ERR(kfetch_class);
