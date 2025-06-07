@@ -23,6 +23,15 @@
 #define CLASS_NAME "kfetch"
 #define KFETCH_NUM_INFO 6
 
+// Add these mask definitions
+#define KFETCH_RELEASE   (1 << 0)
+#define KFETCH_NUM_CPUS  (1 << 1)
+#define KFETCH_CPU_MODEL (1 << 2)
+#define KFETCH_MEM       (1 << 3)
+#define KFETCH_UPTIME    (1 << 4)
+#define KFETCH_NUM_PROCS (1 << 5)
+#define KFETCH_FULL_INFO ((1 << KFETCH_NUM_INFO) - 1)
+
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Seu Nome");
 MODULE_DESCRIPTION("Módulo para informações do sistema");
@@ -66,9 +75,8 @@ static ssize_t kfetch_write(struct file *filep, const char __user *buffer,
     if (copy_from_user(&mask, buffer, sizeof(unsigned int)))
         return -EFAULT;
     
-    // Validate mask (optional) - ensure at least one bit is set
-    // and no bits beyond our defined fields are set
-    if (mask == 0 || (mask & ~((1 << KFETCH_NUM_INFO) - 1)))
+    // Validate mask - ensure no bits beyond our defined fields are set
+    if (mask & ~KFETCH_FULL_INFO)
         return -EINVAL;
     
     mutex_lock(&data->lock);
@@ -86,14 +94,14 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
     int pos = 0;
     int logo_idx = 0;
     const char *logo[] = {
-        "                         ",
-        "                         ",
         "  _________________      ",
         " /  _____/\\______  \\   ",
         "/   \\  ___    /    /    ",
         "\\    \\_\\  \\  /    /  ",
         " \\______  / /____/      ",
         "        \\/              ",
+        "                         ",
+        "                         ",
         "                         ",
         "                         "
     };
@@ -107,27 +115,27 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
     pos += snprintf(buf + pos, size - pos, "%-32s ----------------------------------\n", logo[logo_idx++]);
 
     // Informação do kernel
-    if (data->mask & (1 << 0)) {
+    if (data->mask & KFETCH_RELEASE) {
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : logo[logo_lines - 1];
         pos += snprintf(buf + pos, size - pos, "%-32s Kernel: %s\n", line, uts->release);
     }
 
     // Informação do número de CPUs
-    if (data->mask & (1 << 1)) {
+    if (data->mask & KFETCH_NUM_CPUS) {
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
         pos += snprintf(buf + pos, size - pos, "%-32s CPUs: %u/%u\n", line,
                       num_online_cpus(), num_possible_cpus());
     }
 
     // Informação do CPU modelo
-    if (data->mask & (1 << 2)) {
+    if (data->mask & KFETCH_CPU_MODEL) {
         struct cpuinfo_x86 *c = &cpu_data(0);
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
         pos += snprintf(buf + pos, size - pos, "%-32s CPU: %s\n", line, c->x86_model_id);
     }
 
     // Informação da memória
-    if (data->mask & (1 << 3)) {
+    if (data->mask & KFETCH_MEM) {
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
         pos += snprintf(buf + pos, size - pos, "%-32s Mem: %luMB/%luMB\n", line,
                       (mem_info.freeram << (PAGE_SHIFT - 10)) / 1024,
@@ -135,14 +143,14 @@ static void get_system_info(struct kfetch_data *data, char *buf, size_t size) {
     }
 
     // Informação de uptime
-    if (data->mask & (1 << 4)) {
+    if (data->mask & KFETCH_UPTIME) {
         unsigned long minutes = uptime.tv_sec / 60;
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
         pos += snprintf(buf + pos, size - pos, "%-32s Uptime: %lu min\n", line, minutes);
     }
 
     // Informação de processos
-    if (data->mask & (1 << 5)) {
+    if (data->mask & KFETCH_NUM_PROCS) {
         struct task_struct *task;
         int process_count = 0;
         const char *line = (logo_idx < logo_lines) ? logo[logo_idx++] : "                   ";
