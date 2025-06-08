@@ -30,7 +30,7 @@ sudo dnf install kernel-devel kernel-headers gcc make
 3. Execute o comando make para compilar:
 
 ```bash
-cd Modulos-de-Kernel
+cd <Seu_caminho_até_o_diretório>/Modulos-de-Kernel
 make
 ```
 
