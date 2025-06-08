@@ -25,11 +25,15 @@ sudo apt install build-essential linux-headers-$(uname -r)
 ## Compilação dos módulos
 
 1. Clone este repositório ou extraia os arquivos em um diretório
-2. Navegue até o diretório dos módulos
-3. Execute o comando make para compilar:
-
+```bash
+git clone https://github.com/VRoston/Modulos-de-Kernel.git
+``` 
+3. Navegue até o diretório dos módulos
 ```bash
 cd <Seu_caminho_até_o_diretório>/Modulos-de-Kernel
+```
+3. Execute o comando make para compilar:
+```bash
 make
 ```
 
