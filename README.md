@@ -130,5 +130,5 @@ make clean
 ```
 ## Known issues
 
-- Na versão 22 do Ubuntu uma função ```class_create``` quebra por falta de um parametro, para solucionar na linha(214) desta função e mude a funlção para ```class_create(THIS_MODULE, CLASS_NAME);```.
-- Nós testamos somente em ```UbuntuServer 22, 24``` não damos serteza que irá fucionar em outro sistemas.
+- Na versão 22 do Ubuntu uma função ```class_create``` quebra por falta de um parametro, para solucionar vá para a linha 214 do arquivo kfetch.mod.c e mude a função para ```class_create(THIS_MODULE, CLASS_NAME);```.
+- Foi feito testes em ```UbuntuServer 22 e 24```.
