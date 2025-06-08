@@ -15,12 +15,11 @@ Este projeto contém dois módulos de kernel Linux:
 Instale as dependências necessárias:
 
 ```bash
-# Para distribuições baseadas em Debian/Ubuntu
 sudo apt update
-sudo apt install build-essential linux-headers-$(uname -r)
+```
 
-# Para distribuições baseadas em RHEL/Fedora
-sudo dnf install kernel-devel kernel-headers gcc make
+```bash
+sudo apt install build-essential linux-headers-$(uname -r)
 ```
 
 ## Compilação dos módulos
@@ -43,10 +42,12 @@ Após a compilação bem-sucedida, você verá os arquivos `.ko` gerados no dire
 ```bash
 # Carregue o módulo kfetch
 sudo insmod kfetch_mod.ko
-
+```
+```bash
 # Verifique se o módulo foi carregado corretamente
 lsmod | grep kfetch
-
+```
+```bash
 # Verifique o dispositivo criado
 ls -l /dev/kfetch
 ```
@@ -56,10 +57,12 @@ ls -l /dev/kfetch
 ```bash
 # Carregue o módulo risk
 sudo insmod risk_mod.ko
-
+```
+```bash
 # Verifique se o módulo foi carregado corretamente
 lsmod | grep risk
-
+```
+```bash
 # Verifique a entrada criada em /proc
 ls -l /proc/kfetch_risk
 ```
@@ -68,22 +71,23 @@ ls -l /proc/kfetch_risk
 
 ### kfetch_mod
 
-O módulo kfetch cria um dispositivo de caractere `/dev/kfetch` que pode ser lido para obter informações do sistema.
+O módulo kfetch cria um dispositivo de caractere `/dev/kfetch` que pode ser lido pelo kfetch.c, primeiro ele deve ser copilado.
 
 ```bash
-# Ler informações padrão do sistema
-sudo cat /dev/kfetch
+gcc -g -o kfetch kfetch.c
+```
+Para ler as infomação utilize abaixo:
 
-# Definir máscara personalizada (bitwise) para filtrar informações específicas:
-# Bit 0: Kernel
-# Bit 1: Número de CPUs
-# Bit 2: Modelo da CPU
-# Bit 3: Memória
-# Bit 4: Uptime
-# Bit 5: Processos
-# Exemplo para mostrar apenas kernel e memória (bits 0 e 3):
-echo -ne "\x09\x00\x00\x00" > /dev/kfetch  # Valor 9 (1001 em binário)
-sudo cat /dev/kfetch
+```bash
+sudo ./kfetch
+```
+
+Para filtrar as informações que serão exibidas passe um parametro que determinará a sua mascara:  
+
+```bash
+# A máscara determina o que será exibido transformando o número
+# passado em binário e mostrando a informação equivalente que tem o valor 1
+sudo ./kfetch 1
 ```
 
 ### risk_mod
@@ -100,12 +104,16 @@ cat /proc/kfetch_risk
 ```bash
 # Remover o módulo kfetch
 sudo rmmod kfetch_mod
-
+```
+```bash
 # Remover o módulo risk
 sudo rmmod risk_mod
-
+```
+```bash
 # Verificar se os módulos foram removidos
 lsmod | grep kfetch
+```
+```bash
 lsmod | grep risk
 ```
 
@@ -116,9 +124,7 @@ Para limpar os arquivos compilados:
 ```bash
 make clean
 ```
+## Known issues
 
-## Observações
-
-- Este módulo foi desenvolvido para fins educacionais
-- A avaliação de risco é apenas um exemplo simples e não representa uma análise real de segurança
-- Certifique-se de ter as permissões adequadas para acessar os dispositivos criados
+- Na versão 22 do Ubuntu uma função ```class_create``` quebra por falta de um parametro, para solucionar va na linha(214) desta função e mude a funlção para ```class_create(THIS_MODULE, CLASS_NAME);```.
+- Nós testamos somente em ```UbuntuServer 22, 24``` não damos serteza que irá fucionar em outro sistemas.
