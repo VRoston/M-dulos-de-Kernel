@@ -13,7 +13,7 @@
 
 int main(int argc, char *argv[]) {
     int fd, mask;
-    char buffer[4096];
+    char buffer[4096] = "";
     
     fd = open("/dev/kfetch", O_RDWR);
     if (fd < 0) {

@@ -7,3 +7,4 @@
 *.cmd
 *.ko.cmd
 *.mod.c
+kfetch
