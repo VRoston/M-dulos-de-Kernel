@@ -72,7 +72,7 @@ O módulo kfetch cria um dispositivo de caractere `/dev/kfetch` que pode ser lid
 
 ```bash
 # Ler informações padrão do sistema
-cat /dev/kfetch
+sudo cat /dev/kfetch
 
 # Definir máscara personalizada (bitwise) para filtrar informações específicas:
 # Bit 0: Kernel
@@ -83,7 +83,7 @@ cat /dev/kfetch
 # Bit 5: Processos
 # Exemplo para mostrar apenas kernel e memória (bits 0 e 3):
 echo -ne "\x09\x00\x00\x00" > /dev/kfetch  # Valor 9 (1001 em binário)
-cat /dev/kfetch
+sudo cat /dev/kfetch
 ```
 
 ### risk_mod
